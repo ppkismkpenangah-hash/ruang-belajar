@@ -257,21 +257,25 @@ const mr=(oc,lb,t,k)=>`<div class="row${k?' k':''}"${k?` style="--c:${cl(k).c};-
 let NK=[],nc=0,auto=false,at=0;
 let LT=false,OQ=false,D,sub,S,nama,kelas,Q=[],J=[],op=new Set(),cur=0,mula,off,dur,timer,busy=false,hk='',pg='q';
 
-// Ambil data awal daripada pelayan (had masa 9 saat supaya tidak tergantung pada talian lemah)
+// Ambil data awal daripada pelayan (had masa 20 saat supaya tidak tergantung selama-lamanya pada talian lemah)
 async function muatData(){
-  const ac=new AbortController(),tm=setTimeout(()=>ac.abort(),9000);
+  const ac=new AbortController(),tm=setTimeout(()=>ac.abort(),20000);
   try{const d=await (await fetch(API+'?'+new URLSearchParams({a:'init'}),{signal:ac.signal})).json();if(!d.set)throw 0;return d}
   finally{clearTimeout(tm)}
 }
 let REF=false;
 // Segarkan data di latar belakang; jika murid masih di skrin utama, paparkan semula dengan data terkini
-async function segar(){
-  if(REF||!navigator.onLine)return;REF=true;
+async function segar(n){
+  n=n||0;if(REF||!navigator.onLine)return;REF=true;let ok=false;
   try{
-    const d=await muatData();D=d;LT=false;sv('oi',d);cfgApply(d.cfg);setTimeout(()=>{syn();pref()},800);
-    if($('app')&&/Pilih Ruangan|Pilih Mata Pelajaran/.test($('app').textContent))home();
-  }catch(e){LT=true}
+    const d=await muatData();D=d;LT=false;sv('oi',d);cfgApply(d.cfg);setTimeout(()=>{syn();pref()},800);ok=true;
+    const ap=$('app');
+    if(ap&&/Pilih Ruangan/.test(ap.textContent))home();
+    else if(ap)ap.querySelectorAll('p').forEach(x=>{if(/Tiada internet/.test(x.textContent)&&!x.closest('.end'))x.remove()}); // buang amaran luar talian yang sudah tidak benar
+  }catch(e){}
   REF=false;
+  // Gagal sementara (pelayan lambat/tersekat): cuba lagi dua kali. Jangan anggap tiada internet jika peranti masih dalam talian.
+  if(!ok&&n<2)setTimeout(()=>segar(n+1),5000*(n+1));
 }
 async function home(){
   clearInterval(timer);auto=false;speechSynthesis.cancel();
@@ -357,7 +361,8 @@ function rvOpen(){
   const a=ld('ov',[]);if(!a.length)return;const x=a.shift();sv('ov',a);
   S=x.i;nama=x.n;kelas=x.k;sub=x.sub;Q=x.q;J=String(x.j).split('');rev({m:x.m,z:x.z,k:x.kk});
 }
-addEventListener('online',()=>{syn();pref()});
+addEventListener('online',()=>{LT=false;segar();syn();pref()});
+addEventListener('offline',()=>{LT=true});
 function kuiz(){
   const ss=subs(D.set);
   v(ovb()+(LT?'<p><b>📴 Tiada internet.</b> Hanya set latihan yang sudah dimuat turun boleh dijawab.</p>':'')+'<h2>Pilih Mata Pelajaran: '+sp('Pilih mata pelajaran')+'</h2>'+ss.map((s,i)=>mr(`sets(${i})`,cl(s).i+' '+sk(s),s,s)).join('')+(D.nota&&D.nota.length?mr('home()','⬅ Kembali','Kembali'):''));
