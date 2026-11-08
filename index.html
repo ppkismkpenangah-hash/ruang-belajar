@@ -232,19 +232,24 @@ const cd=(oc,ic,nm,t,c,bg)=>`<div class="cd" style="--c:${c};--t:${bg}"><button 
 // Baris menu: butang pilihan di kiri, kotak 🔊 berasingan di kanan (sama seperti soalan kuiz)
 const mr=(oc,lb,t,k)=>`<div class="row${k?' k':''}"${k?` style="--c:${cl(k).c};--t:${cl(k).t}"`:''}><button class="btn t" onclick="${oc}">${lb}</button><button class="btn c" aria-label="Dengar ${e(t)}" data-t="${e(t)}" onclick="spk(event,this)">🔊</button></div>`;
 let NK=[],nc=0,auto=false,at=0;
-let D,sub,S,nama,kelas,Q=[],J=[],op=new Set(),cur=0,mula,off,dur,timer,busy=false,hk='',pg='q';
+let LT=false,D,sub,S,nama,kelas,Q=[],J=[],op=new Set(),cur=0,mula,off,dur,timer,busy=false,hk='',pg='q';
 
 async function home(){
   clearInterval(timer);auto=false;speechSynthesis.cancel();
-  if(!D){
+  if(!D||LT){
     if(API.startsWith('GANTI')){v('<p>URL Apps Script belum dimasukkan dalam index.html.</p>');return}
-    try{D=await api({a:'init'});if(!D.set)throw 0;cfgApply(D.cfg)}
-    catch(x){D=null;v('<p>Tidak dapat membaca Sheet. Semak URL Apps Script dan tetapan akses (Anyone).</p>');return}
+    try{D=await api({a:'init'});if(!D.set)throw 0;LT=false;sv('oi',D);cfgApply(D.cfg)}
+    catch(x){
+      const c=ld('oi',null); // luar talian: guna salinan senarai terakhir (nota sahaja)
+      if(c&&c.set){D=c;LT=true;cfgApply(D.cfg)}
+      else{D=null;v('<p>Tidak dapat membaca Sheet. Semak sambungan internet, URL Apps Script dan tetapan akses (Anyone).</p>');return}
+    }
   }
-  if(D.nota&&D.nota.length){v(`<h2>Pilih Ruangan: ${sp('Pilih ruangan')}</h2><div class="cds">${cd('nota()','📚','Nota','Nota','#1b5e32','#e3f1e6')}${cd('kuiz()','📝','Kuiz / Ujian','Kuiz atau Ujian','#b8860b','#fbf1cf')}</div>`);return}
+  if(D.nota&&D.nota.length){v((LT?'<p><b>📴 Tiada internet.</b> Hanya nota yang pernah dibuka boleh dibaca.</p>':'')+`<h2>Pilih Ruangan: ${sp('Pilih ruangan')}</h2><div class="cds">${cd('nota()','📚','Nota','Nota','#1b5e32','#e3f1e6')}${cd('kuiz()','📝','Kuiz / Ujian','Kuiz atau Ujian','#b8860b','#fbf1cf')}</div>`);return}
   kuiz();
 }
 function kuiz(){
+  if(LT){v('<h2>Tiada internet</h2><p>Kuiz dan ujian memerlukan sambungan internet. Sila sambung internet dan cuba lagi.</p>'+(D.nota&&D.nota.length?'<button class="btn" onclick="home()">⬅ Kembali</button>':'<button class="btn p" onclick="home()">Cuba lagi</button>'));return}
   const ss=subs(D.set);
   v('<h2>Pilih Mata Pelajaran: '+sp('Pilih mata pelajaran')+'</h2>'+ss.map((s,i)=>mr(`sets(${i})`,cl(s).i+' '+sk(s),s,s)).join('')+(D.nota&&D.nota.length?mr('home()','⬅ Kembali','Kembali'):''));
 }
@@ -264,8 +269,11 @@ async function nopen(i){
     if(r.u){v(`<p>Nota jenis ini dibuka dalam tab baharu dan tiada suara dalam aplikasi.</p><a class="btn p" href="${e(r.u)}" target="_blank">Buka nota</a><button class="btn" onclick="home()">⬅ Kembali</button>`);return}
     if(r.err)throw r.m||0;
     if(!r.k||!r.k.length)throw 0;
-    NK=r.k;nc=0;auto=false;nv();
-  }catch(x){v('<p>Tidak dapat membuka nota. Semak pautan dan perkongsian fail.</p>'+(typeof x=='string'?'<p><small>Sebab: '+e(x)+'</small></p>':'')+'<button class="btn" onclick="nota()">⬅ Kembali</button>')}
+    NK=r.k;nc=0;auto=false;sv('on'+i,r.k);nv();
+  }catch(x){
+    const c=ld('on'+i,null);
+    if(c&&c.length){NK=c;nc=0;auto=false;nv();return}
+    v((LT||!navigator.onLine?'<p>Nota ini belum pernah dibuka dan tiada internet. Sambung internet dan buka nota ini sekali, selepas itu ia boleh dibaca tanpa internet.</p>':'<p>Tidak dapat membuka nota. Semak pautan dan perkongsian fail.</p>')+(typeof x=='string'?'<p><small>Sebab: '+e(x)+'</small></p>':'')+'<button class="btn" onclick="nota()">⬅ Kembali</button>')}
 }
 function nv(){
   const k=NK[nc],N=NK.length;
