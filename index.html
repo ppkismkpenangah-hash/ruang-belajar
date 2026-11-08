@@ -265,9 +265,9 @@ async function pref(){
   for(const x of (D.set||[])){
     if(!x.of)continue;
     try{
-      if(Date.now()-ld('oqt'+x.i,0)<216e5&&ld('oq'+x.i,null))continue;
+      {const c0=ld('oq'+x.i,null);if(Date.now()-ld('oqt'+x.i,0)<216e5&&c0&&c0.k)continue}
       const r=await api({a:'muat',i:x.i});
-      if(r&&r.q&&r.q.length){sv('oq'+x.i,{q:r.q,dur:r.dur});sv('oqt'+x.i,Date.now());
+      if(r&&r.q&&r.q.length){sv('oq'+x.i,{q:r.q,k:r.k,dur:r.dur});sv('oqt'+x.i,Date.now());
         r.q.forEach(c=>{if(c.g)fetch(c.g,{mode:'no-cors'}).catch(()=>{})})}
     }catch(e){if(!navigator.onLine)break}
   }
@@ -280,7 +280,7 @@ async function syn(){
     try{
       const r=await api({a:'segerak',i:x.i,n:x.n,k:x.k,j:x.j,m:x.m,t:x.t,sub:x.sub});
       if(r.ok||r.dup)ok.push(x);
-      if(r.ok&&r.k){const ov=ld('ov',[]);ov.push({i:x.i,n:x.n,k:x.k,j:x.j,sub:x.sub,q:x.q,m:r.m,z:r.z,kk:r.k});sv('ov',ov)} // keputusan sedia dipapar kepada murid
+      if(r.ok&&r.k&&!x.s){const ov=ld('ov',[]);ov.push({i:x.i,n:x.n,k:x.k,j:x.j,sub:x.sub,q:x.q,m:r.m,z:r.z,kk:r.k});sv('ov',ov)} // keputusan sedia dipapar kepada murid
     }catch(e){break}
   }
   sv('op',ld('op',[]).filter(c=>!ok.some(o=>o.i==c.i&&o.n==c.n&&o.m==c.m)));SYN=false;
@@ -354,6 +354,12 @@ function pdfv(i){
 function who(i){
   S=i;const ns=[...new Set(D.m.map(x=>x.n))].sort();
   v(`<h2>Pilih nama dan kelas</h2><select id="n" onchange="nm()"><option value="">Pilih nama</option>${ns.map(n=>`<option>${e(n)}</option>`).join('')}</select><select id="k"><option value="">Pilih kelas</option></select><button class="btn p" onclick="go()">Teruskan ➡</button><button class="btn" onclick="sets(${subs(D.set).indexOf(sub)})">⬅ Kembali</button>`);
+  // Tanda ⭐ di sebelah nama murid yang sudah menjawab set ini (dari rekod Sheet, berfungsi pada semua peranti)
+  if(!LT&&navigator.onLine)api({a:'selesai',i}).then(r=>{
+    const n=$('n');if(S!==i||!n||!r.n||!r.n.length)return;
+    const sd=new Set(r.n);
+    [...n.options].forEach((o,x)=>{if(!x){o.textContent='Pilih nama (⭐ = sudah menjawab)';return}if(sd.has(o.value)){o.value=o.value;o.textContent=o.value+' ⭐'}});
+  }).catch(()=>{});
 }
 function nm(){const ks=[...new Set(D.m.filter(x=>x.n==$('n').value).map(x=>x.k))];$('k').innerHTML=(ks.length==1?'':'<option value="">Pilih kelas</option>')+ks.map(k=>`<option>${e(k)}</option>`).join('')}
 async function go(){
@@ -412,14 +418,32 @@ function ask(){
 }
 async function submit(){
   if(busy)return;busy=true;
-  if(OQ){
+  const oc=ld('oq'+S,null),kk=oc&&oc.k&&oc.k.length==Q.length?oc.k:null;
+  // Selesaikan di peranti: kira markah dan papar semakan serta-merta, hantar ke Sheet apabila ada internet
+  const luarSiap=()=>{
     const st=D.set.find(x=>x.i==S)||{},p=ld('op',[]);
-    p.push({i:S,n:nama,k:kelas,j:J.join(''),m:mula,t:st.t,sub:st.sub,q:Q});sv('op',p);
+    p.push({i:S,n:nama,k:kelas,j:J.join(''),m:mula,t:st.t,sub:st.sub,q:Q,s:1});sv('op',p);
     const od=ld('od',[]);od.push(S+'|'+nama);sv('od',od);OQ=false;
-    fin('Jawapan disimpan. Markah dan semakan jawapan akan muncul di halaman utama apabila internet kembali.');syn();return;
+    let m=0;Q.forEach((_,i)=>{if(J[i]==kk[i])m++});
+    rev({m,z:Q.length,k:kk});syn();
+  };
+  const tiadaNet=()=>{
+    if(rem()<=0)clearInterval(timer);busy=false;
+    const t='Tiada internet. Jawapan anda disimpan. Sambung internet, kemudian tekan Cuba lagi.';
+    v(`<div class="end"><b>📴</b><h2>Tiada internet</h2><p>Jawapan anda disimpan. Sambung internet, kemudian tekan Cuba lagi.</p><button class="btn p" onclick="submit()">🔄 Cuba lagi</button><button class="btn" onclick="list()">🔍 Semak semula</button></div>`);say(t);
+  };
+  if(OQ||!navigator.onLine){
+    if(kk){luarSiap();return}
+    if(OQ){ // salinan lama tanpa jawapan: simpan dan tunggu internet
+      const st=D.set.find(x=>x.i==S)||{},p=ld('op',[]);
+      p.push({i:S,n:nama,k:kelas,j:J.join(''),m:mula,t:st.t,sub:st.sub,q:Q});sv('op',p);
+      const od=ld('od',[]);od.push(S+'|'+nama);sv('od',od);OQ=false;
+      fin('Jawapan disimpan. Markah dan semakan jawapan akan muncul di halaman utama apabila internet kembali.');syn();return;
+    }
+    tiadaNet();return;
   }
   try{const r=await api({a:'submit',i:S,n:nama,j:'J'+J.join('')});r.k?rev(r):fin('Selesai, terima kasih')}
-  catch(x){busy=false}
+  catch(x){if(kk){luarSiap()}else{tiadaNet()}}
 }
 let RV=[];
 function slip(r){
