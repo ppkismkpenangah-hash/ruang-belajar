@@ -226,7 +226,11 @@ const ld=(k,d)=>{try{const z=JSON.parse(localStorage.getItem(k));return z==null?
 const sv=(k,z)=>{try{localStorage.setItem(k,JSON.stringify(z))}catch(x){}};
 const nDone=i=>ld('nd',[]).includes(i)?' ✔':'';
 const sDone=i=>((ld('sd',{})[ld('ln','')])||[]).includes(i)?' ⭐':'';
-function mk(){if(!nama||S===undefined)return;const m=ld('sd',{});m[nama]=[...new Set((m[nama]||[]).concat(S))];sv('sd',m);sv('ln',nama)}
+// Senarai nama murid yang sudah menjawab tiap-tiap set, disimpan pada peranti (cache 'sn'+set) supaya tanda ⭐ keluar serta-merta dan juga luar talian
+const snGet=i=>{const a=ld('sn'+i,[]),o=ld('od',[]).filter(z=>z.startsWith(i+'|')).map(z=>z.slice(String(i).length+1));return [...new Set(a.concat(o))]};
+function snAdd(i,n){const a=ld('sn'+i,[]);if(!a.includes(n)){a.push(n);sv('sn'+i,a)}}
+const sudahJawab=(i,n)=>snGet(i).includes(n);
+function mk(){if(!nama||S===undefined)return;snAdd(S,nama);const m=ld('sd',{});m[nama]=[...new Set((m[nama]||[]).concat(S))];sv('sd',m);sv('ln',nama)}
 // Kad besar untuk skrin ruangan
 const cd=(oc,ic,nm,t,c,bg)=>`<div class="cd" style="--c:${c};--t:${bg}"><button class="cm" onclick="${oc}"><span class="ic">${ic}</span><span>${sk(nm)}</span></button><button class="cs" aria-label="Dengar ${e(t)}" data-t="${e(t)}" onclick="spk(event,this)">🔊</button></div>`;
 // Baris menu: butang pilihan di kiri, kotak 🔊 berasingan di kanan (sama seperti soalan kuiz)
@@ -245,7 +249,7 @@ async function home(){
       else{D=null;v('<p>Tidak dapat membaca Sheet. Semak sambungan internet, URL Apps Script dan tetapan akses (Anyone).</p>');return}
     }
   }
-  if(D.nota&&D.nota.length){v(ovb()+(LT?'<p><b>📴 Tiada internet.</b> Hanya nota yang pernah dibuka boleh dibaca.</p>':'')+`<h2>Pilih Ruangan: ${sp('Pilih ruangan')}</h2><div class="cds">${cd('nota()','📚','Nota','Nota','#1b5e32','#e3f1e6')}${cd('kuiz()','📝','Kuiz / Ujian','Kuiz atau Ujian','#b8860b','#fbf1cf')}</div>`);return}
+  if(D.nota&&D.nota.length){v(ovb()+`<h2>Pilih Ruangan: ${sp('Pilih ruangan')}</h2><div class="cds">${cd('nota()','📚','Nota','Nota','#1b5e32','#e3f1e6')}${cd('kuiz()','📝','Kuiz / Ujian','Kuiz atau Ujian','#b8860b','#fbf1cf')}</div>`);return}
   kuiz();
 }
 // Muat turun senyap semua nota (teks + gambar) apabila ada internet, supaya boleh dibaca luar talian.
@@ -253,6 +257,10 @@ async function home(){
 let PF=false;
 async function pref(){
   if(PF||!D||!navigator.onLine)return;PF=true;
+  for(const x of (D.set||[])){ // senarai murid yang sudah menjawab (untuk tanda ⭐ pantas dan luar talian)
+    if(x.pdf||x.gdoc)continue;
+    try{const r=await api({a:'selesai',i:x.i});if(r&&Array.isArray(r.n))sv('sn'+x.i,r.n)}catch(e){if(!navigator.onLine)break}
+  }
   for(const x of (D.nota||[])){
     try{
       if(Date.now()-ld('ot'+x.i,0)<216e5&&ld('on'+x.i,null))continue;
@@ -284,6 +292,7 @@ async function syn(){
     }catch(e){break}
   }
   sv('op',ld('op',[]).filter(c=>!ok.some(o=>o.i==c.i&&o.n==c.n&&o.m==c.m)));SYN=false;
+  ok.forEach(o=>{snAdd(o.i,o.n);sv('od',ld('od',[]).filter(z=>z!=o.i+'|'+o.n))}); // sudah di Sheet: pindah ke senarai selesai (guru boleh reset kemudian)
   // muat semula skrin utama supaya butang keputusan muncul (hanya jika murid sedang di skrin pilihan)
   if(ok.length&&$('app')&&/Pilih Ruangan|Pilih Mata Pelajaran/.test($('app').textContent))home();
 }
@@ -298,13 +307,14 @@ function kuiz(){
   const ss=subs(D.set);
   v(ovb()+(LT?'<p><b>📴 Tiada internet.</b> Hanya set latihan yang sudah dimuat turun boleh dijawab.</p>':'')+'<h2>Pilih Mata Pelajaran: '+sp('Pilih mata pelajaran')+'</h2>'+ss.map((s,i)=>mr(`sets(${i})`,cl(s).i+' '+sk(s),s,s)).join('')+(D.nota&&D.nota.length?mr('home()','⬅ Kembali','Kembali'):''));
 }
+const notaLT=()=>(LT||!navigator.onLine)?'<p><b>📴 Tiada internet.</b> Hanya nota yang pernah dibuka boleh dibaca.</p>':'';
 function nota(){
   const ss=subs(D.nota);
-  v('<h2>Pilih Mata Pelajaran: '+sp('Pilih mata pelajaran')+'</h2>'+ss.map((s,i)=>mr(`nsub(${i})`,cl(s).i+' '+sk(s),s,s)).join('')+mr('home()','⬅ Kembali','Kembali'));
+  v(notaLT()+'<h2>Pilih Mata Pelajaran: '+sp('Pilih mata pelajaran')+'</h2>'+ss.map((s,i)=>mr(`nsub(${i})`,cl(s).i+' '+sk(s),s,s)).join('')+mr('home()','⬅ Kembali','Kembali'));
 }
 function nsub(i){
   sub=subs(D.nota)[i];
-  v(`<p>Pilih Nota: ${sp('Pilih nota')}</p>`+D.nota.filter(x=>x.sub==sub).map(x=>mr(`nopen(${x.i})`,'📖 '+sk(x.t)+nDone(x.i),x.t,sub)).join('')+mr('nota()','⬅ Kembali','Kembali'));
+  v(notaLT()+`<p>Pilih Nota: ${sp('Pilih nota')}</p>`+D.nota.filter(x=>x.sub==sub).map(x=>mr(`nopen(${x.i})`,'📖 '+sk(x.t)+nDone(x.i),x.t,sub)).join('')+mr('nota()','⬅ Kembali','Kembali'));
 }
 async function nopen(i){
   {const nd=ld('nd',[]);if(!nd.includes(i)){nd.push(i);sv('nd',nd)}}
@@ -352,13 +362,20 @@ function pdfv(i){
   say(st.t);
 }
 function who(i){
-  S=i;const ns=[...new Set(D.m.map(x=>x.n))].sort();
-  v(`<h2>Pilih nama dan kelas</h2><select id="n" onchange="nm()"><option value="">Pilih nama</option>${ns.map(n=>`<option>${e(n)}</option>`).join('')}</select><select id="k"><option value="">Pilih kelas</option></select><button class="btn p" onclick="go()">Teruskan ➡</button><button class="btn" onclick="sets(${subs(D.set).indexOf(sub)})">⬅ Kembali</button>`);
-  // Tanda ⭐ di sebelah nama murid yang sudah menjawab set ini (dari rekod Sheet, berfungsi pada semua peranti)
-  if(!LT&&navigator.onLine)api({a:'selesai',i}).then(r=>{
-    const n=$('n');if(S!==i||!n||!r.n||!r.n.length)return;
-    const sd=new Set(r.n);
-    [...n.options].forEach((o,x)=>{if(!x){o.textContent='Pilih nama (⭐ = sudah menjawab)';return}if(sd.has(o.value)){o.value=o.value;o.textContent=o.value+' ⭐'}});
+  S=i;const ns=[...new Set(D.m.map(x=>x.n))].sort(),sd0=new Set(snGet(i));
+  const op1=n=>`<option value="${e(n)}">${e(n)}${sd0.has(n)?' ⭐':''}</option>`;
+  v(`<h2>Pilih nama dan kelas</h2><select id="n" onchange="nm()"><option value="">${sd0.size?'Pilih nama (⭐ = sudah menjawab)':'Pilih nama'}</option>${ns.map(op1).join('')}</select><select id="k"><option value="">Pilih kelas</option></select><button class="btn p" onclick="go()">Teruskan ➡</button><button class="btn" onclick="sets(${subs(D.set).indexOf(sub)})">⬅ Kembali</button>`);
+  // Segar semula daripada rekod Sheet (pelayan ialah sumber tepat; reset guru turut dipadam daripada tanda)
+  const st=D.set.find(x=>x.i==i)||{};
+  if(!LT&&navigator.onLine&&!st.pdf&&!st.gdoc)api({a:'selesai',i}).then(r=>{
+    if(!r||!Array.isArray(r.n))return;
+    sv('sn'+i,r.n);
+    const n=$('n');if(S!==i||!n)return;
+    const sd=new Set(snGet(i));
+    [...n.options].forEach((o,x)=>{
+      if(!x){o.textContent=sd.size?'Pilih nama (⭐ = sudah menjawab)':'Pilih nama';return}
+      o.value=o.value;o.textContent=o.value+(sd.has(o.value)?' ⭐':'');
+    });
   }).catch(()=>{});
 }
 function nm(){const ks=[...new Set(D.m.filter(x=>x.n==$('n').value).map(x=>x.k))];$('k').innerHTML=(ks.length==1?'':'<option value="">Pilih kelas</option>')+ks.map(k=>`<option>${e(k)}</option>`).join('')}
@@ -367,7 +384,7 @@ async function go(){
   if(!kelas||!nama){say('Pilih kelas dan nama dahulu');alert('Pilih kelas dan nama dahulu');return}
   v('Memuatkan soalan…');
   const st=D.set.find(x=>x.i==S)||{},oc=st.of?ld('oq'+S,null):null;
-  if(LT||!navigator.onLine){if(oc){luarMula(oc)}else{alert('Set ini perlu internet.');who(S)}return}
+  if(LT||!navigator.onLine){if(sudahJawab(S,nama)){dah();return}if(oc){luarMula(oc)}else{alert('Set ini perlu internet.');who(S)}return}
   try{
     const r=await api({a:'start',i:S,n:nama,k:kelas});
     OQ=false;sv('od',ld('od',[]).filter(z=>z!=S+'|'+nama));
@@ -375,11 +392,11 @@ async function go(){
     Q=fixQ(r.q);const sj=String(r.j||'');J=Q.map((_,i)=>'ABCD'.includes(sj[i]||'x')?sj[i]:'-');mula=r.m;off=r.now-Date.now();dur=r.dur;cur=0;op=new Set();
     J.forEach((x,i)=>{if(x!='-')op.add(i)});
     timer=setInterval(tick,1000);quiz();
-  }catch(x){if(oc){luarMula(oc)}else{alert('Tiada sambungan internet. Cuba lagi.');who(S)}}
+  }catch(x){if(sudahJawab(S,nama)){dah();return}if(oc){luarMula(oc)}else{alert('Tiada sambungan internet. Cuba lagi.');who(S)}}
 }
 // Kuiz latihan luar talian: soalan dari simpanan, masa undur dalam telefon, jawapan dihantar kemudian
 function luarMula(c){
-  if(ld('od',[]).includes(S+'|'+nama)){dah();return}
+  if(sudahJawab(S,nama)){dah();return}
   OQ=true;Q=fixQ(c.q);J=Q.map(()=>'-');mula=Date.now();off=0;dur=c.dur;cur=0;op=new Set();
   timer=setInterval(tick,1000);quiz();
 }
