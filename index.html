@@ -343,7 +343,7 @@ function pa(){
 }
 function sets(i){
   sub=subs(D.set)[i];
-  v(`<p>Pilih Set Soalan: ${sp('Pilih set soalan')}</p>`+D.set.filter(x=>x.sub==sub).map(x=>{const pd=x.pdf||x.gdoc,nx=LT&&(pd||!(x.of&&ld('oq'+x.i,null)));return mr(nx?"say('Set ini perlu internet')":`${pd?'pdfv':'who'}(${x.i})`,(nx?'🌐 ':pd?'📄 ':'📝 ')+sk(x.t+(x.f?' (Tingkatan '+x.f+')':''))+(pd?'':sDone(x.i)),x.t+(x.f?' Tingkatan '+x.f:''),sub)}).join('')+mr('kuiz()','⬅ Kembali','Kembali'));
+  v(`<p>Pilih Set Soalan: ${sp('Pilih set soalan')}</p>`+D.set.filter(x=>x.sub==sub).map(x=>{const pd=x.pdf||x.gdoc,nx=LT&&(pd||!(x.of&&ld('oq'+x.i,null)));return mr(nx?"say('Set ini perlu internet')":`${pd?'pdfv':'who'}(${x.i})`,(nx?'🌐 ':pd?'📄 ':'📝 ')+sk(x.t+(x.f?' (Tingkatan '+x.f+')':'')),x.t+(x.f?' Tingkatan '+x.f:''),sub)}).join('')+mr('kuiz()','⬅ Kembali','Kembali'));
 }
 // Set jenis PDF atau Google Docs (ujian praktikal kertas): paparan dokumen, tiada kuiz dan tiada rekod markah
 function pdfv(i){
@@ -371,7 +371,7 @@ async function go(){
   try{
     const r=await api({a:'start',i:S,n:nama,k:kelas});
     OQ=false;sv('od',ld('od',[]).filter(z=>z!=S+'|'+nama));
-    if(r.d){dah();return}
+    if(r.d){dah(r);return}
     Q=fixQ(r.q);const sj=String(r.j||'');J=Q.map((_,i)=>'ABCD'.includes(sj[i]||'x')?sj[i]:'-');mula=r.m;off=r.now-Date.now();dur=r.dur;cur=0;op=new Set();
     J.forEach((x,i)=>{if(x!='-')op.add(i)});
     timer=setInterval(tick,1000);quiz();
@@ -457,6 +457,7 @@ function slip(r){
 }
 function rev(r){
   clearInterval(timer);busy=false;RV=[];mk();
+  try{if(r.k&&Q.length&&nama&&S!==undefined){const rs=ld('rs',{});rs[S+'|'+nama]={q:Q,j:J.join(''),m:r.m,z:r.z,k:r.k};sv('rs',rs)}}catch(x){}
   const m=r.m,z=r.z,pr=z?m/z*100:0,st=pr>=80?3:pr>=50?2:1,oi=(c,q)=>'ABCD'.includes(c)?q.o['ABCD'.indexOf(c)]:'';
   let h=`<div class="end"><b>${'⭐'.repeat(st)}</b><h2>Markah anda: ${m} / ${z}</h2><p>${st==3?'Syabas! Teruskan usaha.':'Lihat soalan yang salah, dan cuba lagi nanti.'}</p><button class="btn" onclick="say('Markah anda ${m} daripada ${z}')">🔊 Dengar markah</button><button class="btn" onclick="print()">🖨 Cetak</button></div>`;
   Q.forEach((q,i)=>{
@@ -466,9 +467,18 @@ function rev(r){
   });
   v(h+'<button class="btn p" onclick="home()">Kembali ke halaman utama</button>'+slip(r));say('Markah anda '+m+' daripada '+z);
 }
-function dah(){
+let RVD=null;
+// Lihat semula markah dan jawapan set yang sudah dijawab (hanya set yang membenarkan semakan; ujian rasmi tiada)
+function lihatSemak(){
+  const d=RVD;if(!d)return;
+  Q=fixQ(d.q);J=String(d.j||'').split('').map(c=>'ABCD'.includes(c)?c:'-');
+  rev({m:d.m,z:d.z,k:d.k});
+}
+function dah(r){
   clearInterval(timer);busy=false;mk();const t='Set soalan ini sudah dijawab';
-  v(`<div class="end"><b>🌟</b><h2>${t}</h2><p>Mahu cuba lagi? Minta Cikgu set semula.</p><button class="btn" onclick="wa()">💬 Minta melalui WhatsApp</button><button class="btn" onclick="mt()">🔔 Minta dalam aplikasi</button><p id="ms"></p><button class="btn p" onclick="home()">Kembali ke halaman utama</button></div>`);say(t+'. Mahu cuba lagi? Minta Cikgu set semula.');
+  RVD=r?((r.k&&r.q)?r:null):(ld('rs',{})[S+'|'+nama]||null); // dalam talian: ikut pelayan; luar talian: salinan pada peranti
+  const bt=RVD?'<button class="btn p" onclick="lihatSemak()">📋 Lihat markah dan jawapan</button>':'';
+  v(`<div class="end"><b>🌟</b><h2>${t}</h2>${bt}<p>Mahu cuba lagi? Minta Cikgu set semula.</p><button class="btn" onclick="wa()">💬 Minta melalui WhatsApp</button><button class="btn" onclick="mt()">🔔 Minta dalam aplikasi</button><p id="ms"></p><button class="btn p" onclick="home()">Kembali ke halaman utama</button></div>`);say(t+(RVD?'. Anda boleh melihat markah dan jawapan.':'')+'. Mahu cuba lagi? Minta Cikgu set semula.');
 }
 function wa(){
   const st=D.set.find(x=>x.i==S);
