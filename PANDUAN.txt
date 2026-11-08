@@ -1,0 +1,26 @@
+RUANG BELAJAR PPKI - PANDUAN PASANG & KONGSI
+=============================================
+A. LETAK DI NETLIFY ATAU GITHUB PAGES (sekali sahaja)
+ 1. Buka app.netlify.com > tapak sedia ada (atau Add new site > Deploy manually).
+ 2. Seret SEMUA fail dalam folder ini (index.html, guru.html, sw.js, manifest*.json, _headers, folder icons) ke Netlify.
+ 3. Pastikan tapak guna HTTPS (Netlify & GitHub Pages automatik). PWA tidak berfungsi tanpa HTTPS.
+ GitHub Pages: muat naik semua fail yang sama ke repositori > Settings > Pages > Deploy from branch (main, /root).
+
+B. MURID / IBU BAPA PASANG DI TELEFON
+ Android (Chrome): buka pautan > tekan butang "Pasang" di bawah skrin
+                   (atau menu ⋮ > Pasang aplikasi).
+ iPhone (Safari)  : buka pautan > Kongsi > Tambah ke Skrin Utama.
+ Ikon crest SMK Penangah akan keluar di skrin utama, buka seperti aplikasi biasa.
+
+C. KONGSI KEPADA SEMUA
+ - Cetak kod QR (qr-murid.png) dan tampal di kelas / hantar dalam kumpulan WhatsApp ibu bapa.
+ - Guru: pasang guru.html sebagai aplikasi berasingan (ikon "Guru PPKI").
+
+D. SELEPAS KEMASKINI
+ Muat naik semula fail ke Netlify. Telefon akan ambil versi baharu secara automatik.
+ Jika tidak berubah, tukar V='ppki-v1' kepada 'ppki-v2' dalam sw.js.
+
+E. (PILIHAN) FAIL APK UNTUK ANDROID
+ Buka pwabuilder.com > tampal pautan tapak > Package for stores > Android > muat turun .apk.
+ Fail APK boleh dihantar terus melalui WhatsApp. Murid ketik fail untuk pasang
+ (perlu benarkan "pasang dari sumber tidak diketahui"). Tidak sesuai untuk iPhone.
