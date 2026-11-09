@@ -636,17 +636,11 @@ if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWor
 (()=>{
   const b=document.getElementById('pasang'),y=document.getElementById('py'),n=document.getElementById('pn'),t=document.getElementById('pt');
   const dipasang=matchMedia('(display-mode: standalone)').matches||navigator.standalone;
-  // Android: tekan ✕ hanya menyembunyikan bar untuk lawatan ini (muncul semula pada lawatan seterusnya jika aplikasi belum dipasang).
-  // iPhone: Safari tidak boleh mengesan pemasangan, jadi bar disembunyikan 7 hari selepas ✕.
-  const ios=/iphone|ipad|ipod/i.test(navigator.userAgent)&&!/crios|fxios/i.test(navigator.userAgent),T0=t.innerHTML,st=ios?localStorage:sessionStorage;
-  let tolak=0;try{tolak=+st.getItem('pasangTolak')||0}catch(x){}
-  if(dipasang||(ios?Date.now()-tolak<7*864e5:tolak))return;
+  let tolak=0;try{tolak=+localStorage.getItem('pasangTolak')||0}catch(x){}
+  if(dipasang||Date.now()-tolak<7*864e5)return;
   let ev=null;
-  n.onclick=()=>{b.style.display='none';try{st.setItem('pasangTolak',Date.now())}catch(x){}};
-  // Chrome hanya menghantar peristiwa ini jika aplikasi belum dipasang dan layak dipasang
-  addEventListener('beforeinstallprompt',e=>{e.preventDefault();ev=e;t.innerHTML=T0;y.style.display='';b.style.display='flex'});
-  // Jika Chrome tidak menghantar peristiwa (contohnya selepas nyahpasang), tunjuk panduan pasang secara manual
-  if(/android/i.test(navigator.userAgent))setTimeout(()=>{if(!ev&&b.style.display!=='flex'){t.innerHTML='Belum dipasang? Ketik <b>⋮</b> kemudian <b>Pasang aplikasi</b>';y.style.display='none';b.style.display='flex'}},6000);
+  n.onclick=()=>{b.style.display='none';try{localStorage.setItem('pasangTolak',Date.now())}catch(x){}};
+  addEventListener('beforeinstallprompt',e=>{e.preventDefault();ev=e;b.style.display='flex'});
   y.onclick=async()=>{if(!ev)return;ev.prompt();await ev.userChoice;ev=null;b.style.display='none'};
   addEventListener('appinstalled',()=>{b.style.display='none'});
   if(/iphone|ipad|ipod/i.test(navigator.userAgent)&&!/crios|fxios/i.test(navigator.userAgent)){
