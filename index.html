@@ -465,6 +465,7 @@ async function go(){
     let r;
     try{r=await api({a:'start',i:S,n:nama,k:kelas})}
     catch(x1){await new Promise(z=>setTimeout(z,1500));r=await api({a:'start',i:S,n:nama,k:kelas})} // cuba sekali lagi untuk ralat sementara
+    if(r.err==='server'){const er=new Error(r.m);er.sv='Ralat pada pelayan Google: '+String(r.m).slice(0,140);throw er}
     if(r.err){const er=new Error('set tidak dijumpai');er.sv='Set soalan ini tidak dijumpai. Senarai sedang dikemas kini, cuba lagi sebentar.';segar();throw er}
     OQ=false;sv('od',ld('od',[]).filter(z=>z!=S+'|'+nama));
     if(r.d){dah(r);return}
