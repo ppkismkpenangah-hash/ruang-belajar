@@ -595,10 +595,12 @@ function fin(t){
   v(`<div class="end"><b>🌟</b><h2>${e(t)}</h2><button class="btn p" onclick="home()">Kembali ke halaman utama</button></div>`);say(t);
 }
 // ===== Butang Kembali Android / pelayar =====
-// Setiap tekanan Kembali menjalankan fungsi butang "Kembali" pada skrin semasa. Di halaman utama: tekan dua kali untuk keluar.
-let HKA=false,HKX=false,HKT=0;
-function toast(t){let o=$('toast');if(!o){o=document.createElement('div');o.id='toast';o.setAttribute('role','status');document.body.appendChild(o)}o.textContent=t;o.classList.add('on');clearTimeout(o._t);o._t=setTimeout(()=>o.classList.remove('on'),2300)}
-function kembaliApp(){ // pulangkan true jika dibenarkan keluar terus daripada aplikasi
+// Setiap tekanan Kembali menjalankan fungsi butang "Kembali" pada skrin semasa. Di halaman utama: amaran, tekan sekali lagi untuk keluar.
+// Pelayar hanya mengiktiraf entri sejarah yang ditambah semasa sentuhan pengguna, maka beberapa entri (penimbal) ditambah pada sentuhan
+// dan diisi semula pada sentuhan seterusnya, bukan di dalam peristiwa Kembali.
+const HKN=6;let HKI=false;
+function toast(t){let o=$('toast');if(!o){o=document.createElement('div');o.id='toast';o.setAttribute('role','status');document.body.appendChild(o)}o.textContent=t;o.classList.add('on');clearTimeout(o._t);o._t=setTimeout(()=>o.classList.remove('on'),2600)}
+function kembaliApp(){ // pulangkan true jika sudah di halaman utama (tiada skrin untuk dikembalikan)
   if($('splash'))return false;
   const ap=$('app');if(!ap)return false;const tx=ap.textContent;
   if(ap.querySelector('#clk')||/Adakah anda mahu hantar/.test(tx)){ // kuiz sedang berjalan
@@ -607,24 +609,24 @@ function kembaliApp(){ // pulangkan true jika dibenarkan keluar terus daripada a
     return false;
   }
   if(/Kad \d+ daripada \d+/.test(tx)&&D&&D.nota){auto=false;at++;speechSynthesis.cancel();nsub(Math.max(0,subs(D.nota).indexOf(sub)));return false} // nota: kembali ke senarai nota
-  if(/Pilih Ruangan/.test(tx)){ // halaman utama
-    if(Date.now()-HKT<2500)return true;
-    HKT=Date.now();toast('Tekan sekali lagi untuk keluar');return false;
-  }
+  if(/Pilih Ruangan/.test(tx))return true; // halaman utama
   const b=[...ap.querySelectorAll('button,a')].find(x=>/^(Kembali|Halaman utama)/i.test(x.textContent.replace(/^[^A-Za-z]+/,'').trim()));
   if(b){speechSynthesis.cancel();b.click();return false}
   home();return false;
 }
-try{if(history.state&&history.state.ppki===1)HKA=true;else history.replaceState({ppki:0},'')}catch(x){}
-// Pelayar mengabaikan entri sejarah yang ditambah tanpa sentuhan pengguna, jadi entri dipasang pada sentuhan pertama
-function pasangHK(){if(HKA)return;HKA=true;try{history.pushState({ppki:1},'')}catch(x){}}
-['pointerdown','keydown','touchstart'].forEach(t=>addEventListener(t,pasangHK,{once:true,capture:true,passive:true}));
+const hkK=()=>{const s=history.state;return s&&typeof s.ppki==='number'?s.ppki:0};
+try{if(!(history.state&&typeof history.state.ppki==='number'))history.replaceState({ppki:0},'')}catch(x){}
+function isiHK(){ // isi semula penimbal apabila hampir habis (dipanggil pada sentuhan)
+  try{let k=hkK();if(k>=3)return;while(k<HKN){k++;history.pushState({ppki:k},'')}}catch(x){}
+}
+['pointerdown','keydown'].forEach(t=>addEventListener(t,isiHK,{capture:true,passive:true}));
 addEventListener('popstate',ev=>{
-  if(HKX){history.back();return}
-  if(!HKA)return;
-  if(ev.state&&ev.state.ppki===1)return; // maju: abaikan
-  if(kembaliApp()){HKX=true;history.back()}
-  else try{history.pushState({ppki:1},'')}catch(x){}
+  if(HKI){HKI=false;return}
+  const st=ev.state;if(!st||typeof st.ppki!=='number')return;
+  if(kembaliApp()){ // di halaman utama: amaran, kemudian balik ke entri asal supaya tekanan seterusnya keluar daripada aplikasi
+    toast('Tekan sekali lagi untuk keluar');
+    if(st.ppki>0){HKI=true;try{history.go(-st.ppki)}catch(x){HKI=false}}
+  }
 });
 home();
 </script><div id="pasang"><span id="pt">📲 Pasang aplikasi ini di telefon anda</span><button class="y" id="py">Pasang</button><button class="n" id="pn" aria-label="Tutup">✕</button></div>
