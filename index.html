@@ -171,7 +171,17 @@ function fixPec(v){
   return v;
 }
 function fixQ(a){(a||[]).forEach(q=>{if(q){if(Array.isArray(q.o))q.o=q.o.map(fixPec);q.s=fixPec(q.s)}});return a}
-const api=async q=>(await fetch(API+'?'+new URLSearchParams(q))).json();
+const api=async q=>{
+  const res=await fetch(API+'?'+new URLSearchParams(q)),t=await res.text();
+  try{return JSON.parse(t)}catch(e){throw new Error('jawapan pelayan tidak sah (HTTP '+res.status+')')}
+};
+// Mesej ralat yang menyatakan punca sebenar (bukan semua kegagalan bermakna tiada internet)
+function pesan(x){
+  if(x&&x.sv)return x.sv;
+  const m=String(x&&x.message||x||'');
+  if(!navigator.onLine||/Failed to fetch|NetworkError|Load failed/i.test(m))return 'Sambungan ke pelayan gagal. Semak internet, kemudian cuba lagi.';
+  return 'Pelayan tidak dapat memuatkan soalan: '+m.slice(0,90)+'. Cuba lagi sebentar lagi.';
+}
 const DL=$('hl').src;let WA='60176308327';
 const DSL=$('sl')?$('sl').src:'';
 // Skrin mula (boleh diubah dalam tab Tetapan: Logo Skrin Mula, Tajuk Skrin Mula, Teks Skrin Mula). Tanda | dalam tajuk = baris baharu.
@@ -452,13 +462,16 @@ async function go(){
   const st=D.set.find(x=>x.i==S)||{},oc=st.of?ld('oq'+S,null):null;
   if(LT||!navigator.onLine){if(sudahJawab(S,nama)){dah();return}if(oc){luarMula(oc)}else{alert('Set ini perlu internet.');who(S)}return}
   try{
-    const r=await api({a:'start',i:S,n:nama,k:kelas});
+    let r;
+    try{r=await api({a:'start',i:S,n:nama,k:kelas})}
+    catch(x1){await new Promise(z=>setTimeout(z,1500));r=await api({a:'start',i:S,n:nama,k:kelas})} // cuba sekali lagi untuk ralat sementara
+    if(r.err){const er=new Error('set tidak dijumpai');er.sv='Set soalan ini tidak dijumpai. Senarai sedang dikemas kini, cuba lagi sebentar.';segar();throw er}
     OQ=false;sv('od',ld('od',[]).filter(z=>z!=S+'|'+nama));
     if(r.d){dah(r);return}
     Q=fixQ(r.q);const sj=String(r.j||'');J=Q.map((_,i)=>'ABCD'.includes(sj[i]||'x')?sj[i]:'-');mula=r.m;off=r.now-Date.now();dur=r.dur;cur=0;op=new Set();
     J.forEach((x,i)=>{if(x!='-')op.add(i)});
     timer=setInterval(tick,1000);quiz();
-  }catch(x){if(sudahJawab(S,nama)){dah();return}if(oc){luarMula(oc)}else{alert('Tiada sambungan internet. Cuba lagi.');who(S)}}
+  }catch(x){if(sudahJawab(S,nama)){dah();return}if(oc){luarMula(oc)}else{alert(pesan(x));who(S)}}
 }
 // Kuiz latihan luar talian: soalan dari simpanan, masa undur dalam telefon, jawapan dihantar kemudian
 function luarMula(c){
