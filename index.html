@@ -3,8 +3,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#1b5e32">
 <link rel="manifest" href="manifest.json">
-<link rel="icon" href="icons/ppki-icon-192.png">
-<link rel="apple-touch-icon" href="icons/ppki-apple-touch.png">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Ruang Belajar">
@@ -18,7 +18,7 @@
 *{box-sizing:border-box}
 body{margin:0;font:22px/1.4 Arial,Helvetica,sans-serif;background:var(--bg);color:var(--n)}
 header{width:calc(100% - 32px);max-width:748px;margin:16px auto 0;background:linear-gradient(135deg,#1b5e32,#3a9140);color:#fff;padding:16px 20px;border-radius:18px;display:flex;align-items:center;gap:16px;box-shadow:0 4px 14px rgba(0,0,0,.18)}
-header img{height:64px;width:auto;max-height:none;margin:0;border-radius:0}
+header img{object-fit:contain;height:64px;width:auto;max-height:none;margin:0;border-radius:0}
 header .tx{display:flex;flex-direction:column;gap:3px}
 header small{color:var(--g);font-size:.5em;font-weight:700;letter-spacing:.12em}
 header b{font-size:1.5em;line-height:1.1;text-transform:uppercase}
@@ -79,7 +79,9 @@ a.btn{text-decoration:none;display:block}
 #pasang .y{background:#d4a017;color:#1b5e32}#pasang .n{background:transparent;color:#fff;font-size:20px;padding:8px 12px}
 #splash{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:24px;text-align:center;transition:opacity .5s}
 #splash.x{opacity:0;pointer-events:none}
-#splash img{width:min(52vw,230px);height:auto;animation:sp 1.6s ease-in-out infinite}
+#splash img{flex:0 0 auto;width:auto;height:auto;max-width:min(52vw,230px);max-height:34vh;object-fit:contain;animation:sp 1.6s ease-in-out infinite}
+#splash{overflow-y:auto}
+@media(max-height:520px){#splash{gap:10px;padding:12px}#splash h1{font-size:clamp(1.05em,4vw,1.5em)}}
 #splash h1{margin:0;font-size:clamp(1.25em,5.2vw,1.9em);letter-spacing:.04em;color:var(--n)}
 #splash p{margin:0;color:var(--n);opacity:.7}
 @keyframes sp{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
